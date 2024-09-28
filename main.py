@@ -17,6 +17,9 @@ def setup_logging(debug=False):
     )
     logging.getLogger("httpx").disabled = True
     logging.getLogger("httpcore").disabled = True
+    logging.getLogger("httpcore.http11").disabled = True
+    logging.getLogger("httpcore.http2").disabled = True
+    logging.getLogger("httpcore.connection").disabled = True
 
 
 async def main():
