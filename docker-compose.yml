@@ -1,0 +1,10 @@
+version: "3"
+
+services:
+  eqqr:
+    image: eqqr
+    build:
+      context: .
+      dockerfile: Dockerfile
+    volumes:
+      - ./config.yaml:/app/config.yaml

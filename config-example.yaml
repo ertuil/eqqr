@@ -1,0 +1,29 @@
+debug: false # 日志等级
+test: true   # 测试模式，发送虚假警告
+users:
+  user1:
+    location:
+      longitude: ""
+      latitude: ""
+    contact:
+      mail: []
+      pushdeer: []
+      tg: []
+      phone: []
+  
+notify:
+  smtp:
+    host: ""
+    port: 465
+    username: ""
+    password: ""
+    tls: true
+  pushdeer:
+    server: "http://api2.pushdeer.com"
+  tg:
+    server: ""
+    secret: ""
+  alisms:
+    access_key_id: ""
+    access_key_secret: ""
+    sign_name: ""
