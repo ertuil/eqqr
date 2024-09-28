@@ -1,11 +1,15 @@
+import time
+import traceback
 import httpx
 import logging
 import config
+import json
 
 
 cene_old_md5 = ""
 sc_old_eventid = ""
 fj_old_eventid = ""
+meihuan_old_eventid = ""
 
 
 async def source_cene():
@@ -123,5 +127,60 @@ async def source_sc():
             logger.info(ret)
             return ret
         except Exception as e:
+            logger.error(f"Failed to parse data from source: {e}")
+            return None
+
+
+async def source_chinaeew():
+    global meihuan_old_eventid
+    logger = logging.getLogger("eqqr.source.chinaeew")
+    async with httpx.AsyncClient(timeout=5) as client:
+        response = await client.get("https://mobile-new.chinaeew.cn/v1/earlywarnings?start_at=&updates=")
+        if response.status_code != 200:
+            logger.error(f"Failed to get data from source: {response.status_code}")
+            return None
+        
+        try:
+            response = response.json()
+        except Exception as e:
+            logger.error(f"Failed to parse data from source: {e} 1")
+            return None
+
+        try:
+            code = response["code"]
+            if code != 0:
+                logger.error(f"Failed to get data from source: code {code}")
+                return None
+            
+            reports = response["data"]
+            report = reports[0]
+           
+            new_event_id = report["eventId"]
+            if meihuan_old_eventid == "" and not config.config["test"]:
+                meihuan_old_eventid = new_event_id
+            if meihuan_old_eventid == new_event_id:
+                logger.debug("No new data from Chinaeew")
+                return None
+            meihuan_old_eventid = new_event_id
+            logger.info("Get new data from Chinaeew")
+
+            start_ts = float(report["startAt"]) / 1000
+            print(start_ts)
+            start_time = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(start_ts))
+            ret = {
+                "time": start_time,
+                "source": report["sourceType"],
+                "type": "地震预警",
+                "location": report["epicenter"],
+                "magnitude": str(round(report["magnitude"], 2)),
+                "depth": str(report.get("depth", "未知")),
+                "latitude": str(round(report["latitude"], 2)),
+                "longitude": str(round(report["longitude"], 2)),
+                "intensity": "",
+            }
+            logger.info(ret)
+            return ret
+        except Exception as e:
+            traceback.print_exc()
             logger.error(f"Failed to parse data from source: {e}")
             return None
