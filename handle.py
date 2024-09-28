@@ -86,23 +86,17 @@ async def handle_report(report):
             logger.info(f"Notify {user_name} with {full_report}")
             await handle_notify(user_info, full_report)
         else:
-            logger.debug(f"Skip notify {user_name} with {full_report} for long distance")
+            logger.debug(
+                f"Skip notify {user_name} with {full_report} for long distance"
+            )
 
 
 async def format_message(
     user_info: Dict[str, Any], full_report: Dict[str, Any]
 ) -> Tuple[str, str]:
-    latitude_str = (
-        "北纬"
-        if float(full_report["latitude"]) > 0
-        else "南纬"
-    )
+    latitude_str = "北纬" if float(full_report["latitude"]) > 0 else "南纬"
     latitude_str = latitude_str + str(abs(float(full_report["latitude"])))
-    longitude_str = (
-        "东经"
-        if float(full_report["longitude"]) > 0
-        else "西经"
-    )
+    longitude_str = "东经" if float(full_report["longitude"]) > 0 else "西经"
     longitude_str = longitude_str + str(abs(float(full_report["longitude"])))
     msg = f"地震警告-{full_report['type']}: {full_report['time']} 在{full_report['location']}（{latitude_str}，{longitude_str}）发生了{full_report['magnitude']}级地震, 震源深度{full_report['depth']}千米, 震中位置距您{full_report['distance']:.1f}千米, 预计{full_report['arrivetime']}到达, 预计您当地烈度为{full_report['local_lintensity']}级。数据来源：{full_report['source']}。"
 
@@ -136,7 +130,7 @@ async def handle_notify(user_info: Dict[str, Any], full_report: Dict[str, Any]):
     if len(push_list) > 0:
         if notify.pushdeer_notifier is None:
             logger.error("Push notifier is not initialized")
-        push_msg = subject +"%0A" +msg
+        push_msg = subject + "%0A" + msg
         for push_key in push_list:
             notify_list.append(notify.pushdeer_notifier.emit(push_msg, push_key))
 
@@ -153,7 +147,9 @@ async def handle_notify(user_info: Dict[str, Any], full_report: Dict[str, Any]):
         if notify.alisms_notifier is None:
             logger.error("Alisms notifier is not initialized")
 
-        notify_list.append(notify.alisms_notifier.emit(alisms_list, "SMS_465374479", {"node": subject}))
+        notify_list.append(
+            notify.alisms_notifier.emit(alisms_list, "SMS_465374479", {"node": subject})
+        )
 
     try:
         await asyncio.gather(*notify_list)

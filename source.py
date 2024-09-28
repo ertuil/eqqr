@@ -19,7 +19,7 @@ async def source_cene():
 
         try:
             new_md5 = response.json()["md5"]
-            if cene_old_md5 == '' and not config.config["test"]:
+            if cene_old_md5 == "" and not config.config["test"]:
                 cene_old_md5 = new_md5
             if new_md5 == cene_old_md5:
                 logger.debug("No new data from CENE")
@@ -61,7 +61,7 @@ async def source_fj():
         try:
             report = response.json()
             new_event_id = report["EventID"]
-            if fj_old_eventid == '' and not config.config["test"]:
+            if fj_old_eventid == "" and not config.config["test"]:
                 fj_old_eventid = new_event_id
             if fj_old_eventid == new_event_id:
                 logger.debug("No new data from SC")
@@ -100,7 +100,7 @@ async def source_sc():
         try:
             report = response.json()
             new_event_id = report["EventID"]
-            if sc_old_eventid == '' and not config.config["test"]:
+            if sc_old_eventid == "" and not config.config["test"]:
                 sc_old_eventid = new_event_id
             if sc_old_eventid == new_event_id:
                 logger.debug("No new data from SC")

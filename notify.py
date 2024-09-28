@@ -86,9 +86,10 @@ class MailNotifier(Notifier):
 
             await sender.sendmail(self.mail_from, mail_to, msg.as_string())
             await sender.quit()
+            self.logger.info(f"Sent mail to {to} successful")
         except Exception as e:
             self.logger.error(f"Failed to send mail to {to}: {e}")
-        self.logger.info(f"Sent mail to {to} successful")
+            return
 
 
 class PushDeerNotifier(Notifier):
