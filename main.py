@@ -16,6 +16,7 @@ def setup_logging(debug=False):
         level=level, format="%(asctime)s [%(name)s] %(levelname)s: %(message)s"
     )
     logging.getLogger("httpx").disabled = True
+    logging.getLogger("httpcore").disabled = True
 
 
 async def main():
