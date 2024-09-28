@@ -1,3 +1,4 @@
+import datetime
 import time
 import traceback
 import httpx
@@ -55,7 +56,7 @@ async def source_cene():
 
 async def source_fj():
     global fj_old_eventid
-    logger = logging.getLogger("eqqr.source.sc")
+    logger = logging.getLogger("eqqr.source.fj")
     async with httpx.AsyncClient(timeout=5) as client:
         response = await client.get("https://api.wolfx.jp/fj_eew.json")
         if response.status_code != 200:
@@ -135,7 +136,8 @@ async def source_chinaeew():
     global meihuan_old_eventid
     logger = logging.getLogger("eqqr.source.chinaeew")
     async with httpx.AsyncClient(timeout=5) as client:
-        response = await client.get("https://mobile-new.chinaeew.cn/v1/earlywarnings?start_at=&updates=")
+        start_ts = int((datetime.datetime.now() - datetime.timedelta(days=7)).timestamp() * 1000)
+        response = await client.get(f"https://mobile-new.chinaeew.cn/v1/earlywarnings?start_at={start_ts}&updates=")
         if response.status_code != 200:
             logger.error(f"Failed to get data from source: {response.status_code}")
             return None
@@ -153,6 +155,9 @@ async def source_chinaeew():
                 return None
             
             reports = response["data"]
+            if len(reports) == 0:
+                logger.debug("No new data from Chinaeew")
+                return None
             report = reports[0]
            
             new_event_id = report["eventId"]
