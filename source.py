@@ -11,6 +11,7 @@ cene_old_md5 = ""
 sc_old_eventid = ""
 fj_old_eventid = ""
 meihuan_old_eventid = ""
+dizhensubao_old_eventid = ""
 
 
 async def source_cene():
@@ -136,12 +137,16 @@ async def source_chinaeew():
     global meihuan_old_eventid
     logger = logging.getLogger("eqqr.source.chinaeew")
     async with httpx.AsyncClient(timeout=5) as client:
-        start_ts = int((datetime.datetime.now() - datetime.timedelta(days=7)).timestamp() * 1000)
-        response = await client.get(f"https://mobile-new.chinaeew.cn/v1/earlywarnings?start_at={start_ts}&updates=")
+        start_ts = int(
+            (datetime.datetime.now() - datetime.timedelta(days=3)).timestamp() * 1000
+        )
+        response = await client.get(
+            f"https://mobile-new.chinaeew.cn/v1/earlywarnings?start_at={start_ts}&updates="
+        )
         if response.status_code != 200:
             logger.error(f"Failed to get data from source: {response.status_code}")
             return None
-        
+
         try:
             response = response.json()
         except Exception as e:
@@ -153,13 +158,13 @@ async def source_chinaeew():
             if code != 0:
                 logger.error(f"Failed to get data from source: code {code}")
                 return None
-            
+
             reports = response["data"]
             if len(reports) == 0:
                 logger.debug("No new data from Chinaeew")
                 return None
             report = reports[0]
-           
+
             new_event_id = report["eventId"]
             if meihuan_old_eventid == "" and not config.config["test"]:
                 meihuan_old_eventid = new_event_id
@@ -170,7 +175,6 @@ async def source_chinaeew():
             logger.info("Get new data from Chinaeew")
 
             start_ts = float(report["startAt"]) / 1000
-            print(start_ts)
             start_time = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(start_ts))
             ret = {
                 "time": start_time,
@@ -179,6 +183,79 @@ async def source_chinaeew():
                 "location": report["epicenter"],
                 "magnitude": str(round(report["magnitude"], 2)),
                 "depth": str(report.get("depth", "未知")),
+                "latitude": str(round(report["latitude"], 2)),
+                "longitude": str(round(report["longitude"], 2)),
+                "intensity": "",
+            }
+            logger.info(ret)
+            return ret
+        except Exception as e:
+            logger.error(f"Failed to parse data from source: {e}")
+            return None
+
+
+async def source_dizhensubao():
+    global dizhensubao_old_eventid
+    logger = logging.getLogger("eqqr.source.dizhensubao")
+    async with httpx.AsyncClient(timeout=5) as client:
+        start_ts = str(
+            int(
+                (datetime.datetime.now() - datetime.timedelta(days=3)).timestamp()
+                * 1000
+            )
+        )
+
+        data = {
+                "action": "requestMonitorDataAction",
+                "startTime": start_ts,
+                "dataSource": "CEIC",
+            }
+
+        response = await client.post(
+            f"http://api.dizhensubao.igexin.com/api.htm",
+            json=data,
+        )
+        if response.status_code != 200:
+            logger.error(f"Failed to get data from source: {response.status_code}")
+            return None
+
+        try:
+            response = response.json()
+        except Exception as e:
+            logger.error(f"Failed to parse data from source: {e} 1")
+            return None
+
+        try:
+            result = response["result"]
+            if result != "OK":
+                logger.error(f"Failed to get data from source: result {result}")
+                return None
+
+            reports = response["values"]
+            if len(reports) == 0:
+                logger.debug("No new data from Chinaeew")
+                return None
+            report = reports[0]
+
+            new_event_id = report["eqid"]
+            if dizhensubao_old_eventid == "" and not config.config["test"]:
+                dizhensubao_old_eventid = new_event_id
+            if dizhensubao_old_eventid == new_event_id:
+                logger.debug("No new data from 地震速报")
+                return None
+            dizhensubao_old_eventid = new_event_id
+            logger.info("Get new data from 地震速报")
+
+            start_ts = float(report["time"]) / 1000
+            start_time = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(start_ts))
+            source = "CEIC" if report["url"] == "www.ceic.ac.cn" else report["url"]
+            ret = {
+                "time": start_time,
+                "source": source,
+                "type": "地震预警",
+                "location": report["loc_name"],
+                "magnitude": str(round(report["mag"], 2)),
+                "depth": str(report.get("depth", 0) / 1000),
                 "latitude": str(round(report["latitude"], 2)),
                 "longitude": str(round(report["longitude"], 2)),
                 "intensity": "",

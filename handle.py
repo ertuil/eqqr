@@ -7,7 +7,13 @@ import datetime
 from typing import Any, Dict, Tuple
 from geopy.distance import geodesic
 
-from source import source_cene, source_sc, source_fj, source_chinaeew
+from source import (
+    source_cene,
+    source_sc,
+    source_fj,
+    source_chinaeew,
+    source_dizhensubao,
+)
 import notify
 import config
 
@@ -40,26 +46,31 @@ def get_lintensity(distance: float, magunitude: str) -> float:
 
 async def serve():
     logger = logging.getLogger("eqqr.handle")
+    logger.info("Start serving")
+    await asyncio.gather(
+        serve_source(source_chinaeew),
+        serve_source(source_dizhensubao),
+        serve_source(source_cene),
+    )
+
+
+async def serve_source(source_func):
+    logger = logging.getLogger("eqqr.handle")
     while True:
         try:
-            ret = await asyncio.gather(
-                source_cene(),
-                source_sc(),
-                source_fj(),
-                source_chinaeew()
-            )
+            report = await source_func()
         except Exception as e:
             logger.error(f"Failed to get report: {e}")
             await asyncio.sleep(1)
             continue
 
-        for report in ret:
-            if report is None:
-                continue
-            try:
-                await handle_report(report)
-            except Exception as e:
-                logger.error(f"Failed to handle report {report}: {e}")
+        if report is None:
+            await asyncio.sleep(1)
+            continue
+        try:
+            await handle_report(report)
+        except Exception as e:
+            logger.error(f"Failed to handle report {report}: {e}")
 
         await asyncio.sleep(1)
 
@@ -83,7 +94,11 @@ async def handle_report(report):
         full_report["arrivetime"] = arrivetime.strftime("%Y-%m-%d %H:%M:%S")
         full_report["user"] = user_name
 
-        if dist < 200 or (dist <= 1000 and magnitude > 2) or (config.config["test"]):
+        if (
+            dist < 200
+            or (dist <= 1000 and magnitude > 2 and lintensity > 0.1)
+            or (config.config["test"])
+        ):
             logger.info(f"Notify {user_name} with {full_report}")
             await handle_notify(user_info, full_report)
         else:
@@ -98,7 +113,9 @@ async def format_message(
     latitude_str = "北纬" if float(full_report["latitude"]) > 0 else "南纬"
     latitude_str = latitude_str + "{:.2f}".format(abs(float(full_report["latitude"])))
     longitude_str = "东经" if float(full_report["longitude"]) > 0 else "西经"
-    longitude_str = longitude_str + "{:.2f}".format(abs(float(full_report["longitude"])))
+    longitude_str = longitude_str + "{:.2f}".format(
+        abs(float(full_report["longitude"]))
+    )
     msg = f"地震警告-{full_report['type']}: {full_report['time']} 在{full_report['location']}（{latitude_str}，{longitude_str}）发生了{full_report['magnitude']}级地震, 震源深度{full_report['depth']}千米, 震中位置距您{full_report['distance']:.1f}千米, 预计{full_report['arrivetime']}到达, 预计您当地烈度为{full_report['local_lintensity']}级。数据来源：{full_report['source']}。"
 
     subject = f"地震警告-{full_report['type']}: {full_report['location']} {full_report['magnitude']}级地震"
@@ -120,13 +137,6 @@ async def handle_notify(user_info: Dict[str, Any], full_report: Dict[str, Any]):
 
     notify_list = []
 
-    mail_list = config_user_message.get("mail", [])
-    if len(mail_list) > 0:
-        if notify.mail_notifier is None:
-            logger.error("Mail notifier is not initialized")
-
-        notify_list.append(notify.mail_notifier.emit(msg, mail_list, subject))
-
     push_list = config_user_message.get("pushdeer", [])
     if len(push_list) > 0:
         if notify.pushdeer_notifier is None:
@@ -134,14 +144,6 @@ async def handle_notify(user_info: Dict[str, Any], full_report: Dict[str, Any]):
         push_msg = subject + "%0A" + msg
         for push_key in push_list:
             notify_list.append(notify.pushdeer_notifier.emit(push_msg, push_key))
-
-    tg_list = config_user_message.get("tg", [])
-    if len(tg_list) > 0:
-        if notify.tg_notifier is None:
-            logger.error("Telegram notifier is not initialized")
-
-        for chatid in tg_list:
-            notify_list.append(notify.tg_notifier.emit(msg, chatid))
 
     alisms_list = config_user_message.get("phone", [])
     if len(alisms_list) > 0:
@@ -151,6 +153,21 @@ async def handle_notify(user_info: Dict[str, Any], full_report: Dict[str, Any]):
         notify_list.append(
             notify.alisms_notifier.emit(alisms_list, "SMS_465374479", {"node": subject})
         )
+
+    tg_list = config_user_message.get("tg", [])
+    if len(tg_list) > 0:
+        if notify.tg_notifier is None:
+            logger.error("Telegram notifier is not initialized")
+
+        for chatid in tg_list:
+            notify_list.append(notify.tg_notifier.emit(msg, chatid))
+
+    mail_list = config_user_message.get("mail", [])
+    if len(mail_list) > 0:
+        if notify.mail_notifier is None:
+            logger.error("Mail notifier is not initialized")
+
+        notify_list.append(notify.mail_notifier.emit(msg, mail_list, subject))
 
     try:
         await asyncio.gather(*notify_list)
