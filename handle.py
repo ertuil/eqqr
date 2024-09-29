@@ -57,7 +57,7 @@ async def serve():
 
 async def serve_source(source_func: Callable[[], Coroutine[Any, Any, dict[str, Any] | None]], period: int = 1):
     logger = logging.getLogger(f"eqqr.handle.{source_func.__name__}")
-    logger.info("test")
+
     while True:
         try:
             report = await source_func()
