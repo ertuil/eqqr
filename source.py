@@ -138,7 +138,7 @@ async def source_chinaeew():
     logger = logging.getLogger("eqqr.source.chinaeew")
     async with httpx.AsyncClient(timeout=5) as client:
         start_ts = int(
-            (datetime.datetime.now() - datetime.timedelta(days=3)).timestamp() * 1000
+            (datetime.datetime.now() - datetime.timedelta(days=1)).timestamp() * 1000
         )
         response = await client.get(
             f"https://mobile-new.chinaeew.cn/v1/earlywarnings?start_at={start_ts}&updates="
@@ -200,7 +200,7 @@ async def source_dizhensubao():
     async with httpx.AsyncClient(timeout=5) as client:
         start_ts = str(
             int(
-                (datetime.datetime.now() - datetime.timedelta(days=3)).timestamp()
+                (datetime.datetime.now() - datetime.timedelta(days=1)).timestamp()
                 * 1000
             )
         )
