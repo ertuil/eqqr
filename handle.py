@@ -122,6 +122,20 @@ async def format_message(
     return subject, msg
 
 
+async def format_alisms_message(
+    user_info: Dict[str, Any], full_report: Dict[str, Any]
+) -> Tuple[str, str]:
+    time_msg = full_report["time"]
+    try:
+        time_msg = full_report["time"][-8:]
+    except:
+        pass
+    msg = f"时间：{time_msg}；位置{full_report['distance']:.1f}千米；本地烈度{full_report['local_lintensity']}级"
+
+    subject = f"{full_report['type']}: {full_report['location']} {full_report['magnitude']}级地震"
+    return subject, msg
+
+
 async def handle_notify(user_info: Dict[str, Any], full_report: Dict[str, Any]):
     logger = logging.getLogger("eqqr.handle.notify")
     try:
@@ -150,8 +164,9 @@ async def handle_notify(user_info: Dict[str, Any], full_report: Dict[str, Any]):
         if notify.alisms_notifier is None:
             logger.error("Alisms notifier is not initialized")
 
+        alisms_subject, alisms_msg = await format_alisms_message(user_info, full_report)
         notify_list.append(
-            notify.alisms_notifier.emit(alisms_list, "SMS_465374479", {"node": subject})
+            notify.alisms_notifier.emit(alisms_list, "SMS_474255084", {"event": alisms_subject, "msg": alisms_msg})
         )
 
     tg_list = config_user_message.get("tg", [])
