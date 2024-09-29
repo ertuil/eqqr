@@ -4,7 +4,7 @@ import logging
 import math
 import time
 import datetime
-from typing import Any, Dict, Tuple
+from typing import Any, Callable, Coroutine, Dict, Tuple
 from geopy.distance import geodesic
 
 from source import (
@@ -48,31 +48,31 @@ async def serve():
     logger = logging.getLogger("eqqr.handle")
     logger.info("Start serving")
     await asyncio.gather(
-        serve_source(source_chinaeew),
-        serve_source(source_dizhensubao),
-        serve_source(source_cene),
+        serve_source(source_chinaeew, 1),
+        serve_source(source_dizhensubao, 1),
+        serve_source(source_cene, 5),
     )
 
 
-async def serve_source(source_func):
+async def serve_source(source_func: Callable[[], Coroutine[Any, Any, dict[str, Any] | None]], period: int = 1):
     logger = logging.getLogger("eqqr.handle")
     while True:
         try:
             report = await source_func()
         except Exception as e:
             logger.error(f"Failed to get report: {e}")
-            await asyncio.sleep(1)
+            await asyncio.sleep(period)
             continue
 
         if report is None:
-            await asyncio.sleep(1)
+            await asyncio.sleep(period)
             continue
         try:
             await handle_report(report)
         except Exception as e:
             logger.error(f"Failed to handle report {report}: {e}")
 
-        await asyncio.sleep(1)
+        await asyncio.sleep(period)
 
 
 async def handle_report(report):
