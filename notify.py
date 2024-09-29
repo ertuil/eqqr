@@ -100,7 +100,7 @@ class PushDeerNotifier(Notifier):
 
     async def emit(self, content: str, key: str):
         url = f"{self.server}/message/push?pushkey={key}&text={content}"
-        with httpx.Client(timeout=15) as client:
+        with httpx.Client(timeout=5) as client:
             response = client.get(url)
             if response.status_code != 200:
                 self.logger.error(f"Failed to send pushdeer message: {response.text}")
@@ -128,7 +128,7 @@ class TgNotifier(Notifier):
         if chatid:
             data["chatid"] = chatid
 
-        with httpx.Client(timeout=15) as client:
+        with httpx.Client(timeout=5) as client:
             response = client.post(self.tg_server, json=data, headers=header)
             if response.status_code != 200:
                 self.logger.error(f"Failed to send telegram message: {response.text}")

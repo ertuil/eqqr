@@ -4,6 +4,7 @@ import logging
 import math
 import time
 import datetime
+import traceback
 from typing import Any, Callable, Coroutine, Dict, Tuple
 from geopy.distance import geodesic
 
@@ -55,11 +56,13 @@ async def serve():
 
 
 async def serve_source(source_func: Callable[[], Coroutine[Any, Any, dict[str, Any] | None]], period: int = 1):
-    logger = logging.getLogger("eqqr.handle")
+    logger = logging.getLogger(f"eqqr.handle.{source_func.__name__}")
+    logger.info("test")
     while True:
         try:
             report = await source_func()
         except Exception as e:
+            traceback.print_exc()
             logger.error(f"Failed to get report: {e}")
             await asyncio.sleep(period)
             continue
@@ -70,6 +73,7 @@ async def serve_source(source_func: Callable[[], Coroutine[Any, Any, dict[str, A
         try:
             await handle_report(report)
         except Exception as e:
+            traceback.print_exc()
             logger.error(f"Failed to handle report {report}: {e}")
 
         await asyncio.sleep(period)
@@ -187,6 +191,7 @@ async def handle_notify(user_info: Dict[str, Any], full_report: Dict[str, Any]):
     try:
         await asyncio.gather(*notify_list)
     except Exception as e:
+        traceback.print_exc()
         logger.error(f"Failed to notify user: {e}")
         return
     logger.info(f"Notify user {full_report['user']} successful")
