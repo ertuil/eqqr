@@ -88,33 +88,34 @@ async def handle_report(report):
     await asyncio.gather(*user_handle_list)
 
 async def handle_report_user(report, user_name: str):
-        user_info = config.config["users"][user_name]
-        location = user_info["location"]
-        loc1 = (location["latitude"], location["longitude"])
-        loc2 = (report["latitude"], report["longitude"])
+    logger = logging.getLogger("eqqr.handle.report")
+    user_info = config.config["users"][user_name]
+    location = user_info["location"]
+    loc1 = (location["latitude"], location["longitude"])
+    loc2 = (report["latitude"], report["longitude"])
 
-        magnitude = float(report["magnitude"])
-        dist = get_distance(loc1, loc2)
-        lintensity = get_lintensity(dist, report["magnitude"])
-        arrivetime = get_arrivetime(dist, report["time"])
+    magnitude = float(report["magnitude"])
+    dist = get_distance(loc1, loc2)
+    lintensity = get_lintensity(dist, report["magnitude"])
+    arrivetime = get_arrivetime(dist, report["time"])
 
-        full_report = report.copy()
-        full_report["distance"] = dist
-        full_report["local_lintensity"] = lintensity
-        full_report["arrivetime"] = arrivetime.strftime("%Y-%m-%d %H:%M:%S")
-        full_report["user"] = user_name
+    full_report = report.copy()
+    full_report["distance"] = dist
+    full_report["local_lintensity"] = lintensity
+    full_report["arrivetime"] = arrivetime.strftime("%Y-%m-%d %H:%M:%S")
+    full_report["user"] = user_name
 
-        if (
-            dist < 200
-            or (dist <= 1000 and magnitude > 2 and lintensity > 0.1)
-            or (config.config["test"])
-        ):
-            logger.info(f"Notify {user_name} with {full_report}")
-            await handle_notify(user_info, full_report)
-        else:
-            logger.debug(
-                f"Skip notify {user_name} with {full_report} for long distance"
-            )
+    if (
+        dist < 200
+        or (dist <= 1000 and magnitude > 2 and lintensity > 0.1)
+        or (config.config["test"])
+    ):
+        logger.info(f"Notify {user_name} with {full_report}")
+        await handle_notify(user_info, full_report)
+    else:
+        logger.debug(
+            f"Skip notify {user_name} with {full_report} for long distance"
+        )
 
 
 async def format_message(
