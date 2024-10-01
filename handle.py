@@ -81,7 +81,13 @@ async def serve_source(source_func: Callable[[], Coroutine[Any, Any, dict[str, A
 
 async def handle_report(report):
     logger = logging.getLogger("eqqr.handle.report")
+    user_handle_list = []
     for user_name in config.config["users"]:
+        logger.info(f"Handle report for {user_name}")
+        user_handle_list.append(handle_report_user(report, user_name))
+    await asyncio.gather(*user_handle_list)
+
+async def handle_report_user(report, user_name: str):
         user_info = config.config["users"][user_name]
         location = user_info["location"]
         loc1 = (location["latitude"], location["longitude"])
